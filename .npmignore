@@ -1,0 +1,15 @@
+
+examples/
+js/
+test/
+src/
+.vscode/
+.babelrc
+babel-lodash-es.js
+tsconfig.build.json
+tsconfig.json
+webpack.config.js
+.eslintignore
+.eslintrc.js
+.prettierignore
+.prettierrc

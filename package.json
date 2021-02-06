@@ -1,0 +1,68 @@
+{
+  "name": "hello-world",
+  "version": "0.0.1",
+  "description": "Package description here",
+  "author": "Author name here",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "format": "prettier --write \"**/*.ts\"",
+    "lint": "eslint 'src/**/*.ts' --fix",
+    "test": "cross-env NODE_ENV=test jest --config ./test/jest.config.json --bail --runInBand --detectOpenHandles --forceExit",
+    "test:watch": "cross-env NODE_ENV=test jest --config ./test/jest.config.json --watch --runInBand --detectOpenHandles --forceExit",
+    "test:cov": "cross-env NODE_ENV=test jest --config ./test/jest.config.json --coverage --runInBand --detectOpenHandles --forceExit",
+    "prepare": "npm run build",
+    "release:patch": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/package-name.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/package-name/issues"
+  },
+  "homepage": "https://github.com/username/package-name#readme",
+  "peerDependencies": {},
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^25.1.4",
+    "@types/node": "^13.9.2",
+    "@types/supertest": "^2.0.8",
+    "@typescript-eslint/eslint-plugin": "^2.24.0",
+    "@typescript-eslint/parser": "^2.24.0",
+    "cross-env": "^7.0.2",
+    "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.0",
+    "eslint-plugin-import": "^2.20.1",
+    "husky": "^4.2.5",
+    "jest": "^25.1.0",
+    "lint-staged": "^10.2.6",
+    "prettier": "^1.19.1",
+    "reflect-metadata": "^0.1.13",
+    "supertest": "^4.0.2",
+    "ts-jest": "^25.2.1",
+    "ts-loader": "^6.2.1",
+    "ts-node": "^8.7.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.8.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm test"
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.json": "prettier --write"
+  }
+}

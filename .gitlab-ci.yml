@@ -1,0 +1,128 @@
+stages:
+ - test
+ - review
+ - build
+ - release
+ - docs
+ - publish
+
+test:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^release.*$/'
+      when: never
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH =~ /^release.*$/'
+      when: on_success  
+  stage: test
+  coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
+  image: node:12-alpine
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run lint
+    - npm run test:cov
+  artifacts:
+    paths:
+      - coverage/
+      - test-report.xml
+    reports:
+      junit: ./junit.xml
+
+# Fake danger job
+danger:
+  rules:
+   - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  stage: review
+  script:
+    - 'echo mock danger job in review stage'
+
+# Fake sonarcloud-check job
+sonarcloud-check:
+  stage: review
+  script:
+    - 'echo mock sonarcloud-check job in review stage'    
+
+build:
+  stage: build
+  image: node:12-alpine
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+release-version-creation:
+  retry:
+    max: 2
+  stage: .pre
+  rules:
+    - if: '$VERSION'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: on_success
+  script:
+    - >
+     echo "VERSION=$(awk -F'"' '/"version": ".+"/{ print $4;exit;}' package.json)" > VERSION.env
+  artifacts:
+    reports:
+      dotenv: VERSION.env
+
+release-tag:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: manual
+  before_script:
+    - if [ -z $VERSION ]; then echo "VERSION not set"; exit 1; fi; echo VERSION=${VERSION}
+  script:
+    - >
+      release-cli create 
+      --name $VERSION
+      --description "Automatic release $VERSION<br>
+      * [Job $CI_JOB_ID]($CI_JOB_URL)<br>
+      * [Pipeline $CI_PIPELINE_ID]($CI_PIPELINE_URL)<br>
+      * [Release $VERSION]($CI_PROJECT_URL/-/releases/$VERSION)<br>
+      "
+      --tag-name "${VERSION}"
+      --ref $CI_COMMIT_SHA
+  dependencies:
+    - release-version-creation
+
+release-version-check:
+  retry:
+    max: 2
+  stage: review
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release.*$/'
+      when: on_success
+  script:
+    - >
+     export VERSION=$(awk -F'"' '/"version": ".+"/{ print $4;exit;}' package.json)
+    - export BRANCH_RELEASE_VERSION=$(echo ${CI_COMMIT_BRANCH} | cut -d "/" -f 2)
+    - if [ ${VERSION} != ${BRANCH_RELEASE_VERSION} ]; then echo "Mismatched release version. Please fix package.json version value to ${BRANCH_RELEASE_VERSION}"; exit 1; fi;
+
+publish-docs:
+  stage: docs
+  image: node:12-alpine
+  script:
+    - 'npm run build:docs --if-present'
+    - 'npm run build:styleguide --if-present' 
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+
+publish-npm:
+  stage: publish
+  image: node:12-alpine
+  script:
+    - npm publish
+  only:
+    - master
